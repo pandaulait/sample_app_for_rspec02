@@ -7,4 +7,8 @@ class User < ApplicationRecord
   validates :last_name, presence: true
 
   has_many :projects
+
+  def name
+    return first_name + " " + last_name
+  end
 end
