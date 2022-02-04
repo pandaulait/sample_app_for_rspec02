@@ -57,12 +57,25 @@ RSpec.describe ProjectsController, type: :controller do
   describe "#create" do
     let(:user1) { create(:user) }
     context "as an authenticated user" do
-      it "adds a project" do
-        proeject_params = FactoryBot.attributes_for(:project)
-        sign_in user1
-        expect {
-          post :create, params: {project: proeject_params }
-        }.to change(user1.projects, :count).by(1)
+      context "with valid attributes" do
+        it "adds a project" do
+          project_params = FactoryBot.attributes_for(:project)
+          sign_in user1
+          expect {
+            post :create, params: {project: project_params }
+          }.to change(user1.projects, :count).by(1)
+        end
+      end
+    end
+    context "as an authenticated user" do
+      context "with invalid attributes" do
+        it "does not adds a project" do
+          project_params = FactoryBot.attributes_for(:project, :invalid)
+          sign_in user1
+          expect {
+            post :create, params: {project: project_params }
+          }.not_to change(user1.projects, :count)
+        end
       end
     end
     context "as a guest" do
@@ -79,5 +92,51 @@ RSpec.describe ProjectsController, type: :controller do
     end
   end
 
+  describe "#update" do
+    context "as an authorized user" do
+      let(:user) { create(:user) }
+      let(:project) { create(:project, owner: user)}
 
+      it "updates a project" do
+        project_params = FactoryBot.attributes_for(:project, name: "Update Project Name")
+        sign_in user
+        patch :update, params: {id: project.id, project: project_params}
+        expect(project.reload.name).to eq "Update Project Name"
+      end
+    end
+
+    context "as a unauthoeized user" do
+      let(:user) { create(:user)}
+      let(:user1) { create(:user) }
+      let(:project) { create(:project, owner: user1, name: "Same Old Name") }
+
+      it "does not update the project" do
+        project_params = FactoryBot.attributes_for(:project, name: "New Name")
+        sign_in user
+        patch :update, params: { id: project.id, project: project_params }
+        expect(project.reload.name).to eq "Same Old Name"
+      end
+
+      it "redirect to the dashbord" do
+        project_params = FactoryBot.attributes_for(:project)
+        sign_in user
+        patch :update, params: { id: project.id, project: project_params }
+        expect(response).to redirect_to root_path
+      end
+    end
+  end
+
+  describe "#destroy" do
+    let(:user) { create(:user)}
+    let(:project) { create(:project, owner: user) }
+    context "as an authorized user" do
+      it "deletes a project" do
+        sign_in user
+        project
+        expect {
+          delete :destroy, params: { id: project.id }
+        }.to change(user.projects, :count).by(-1)
+      end
+    end
+  end
 end
